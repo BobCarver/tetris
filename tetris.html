@@ -5,27 +5,34 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+
+
 </head>
 <body background="">
     <svg viewBox="-10 -10 30 40">
         <style>
+            #shape0 { 
+                --speed: 1s;
+                transition: y 3s linear;
+            }
             #I { fill: "cyan"}
             #O { fill: "yellow"}
-            #T { fill: "purple"; transform-origin: ".5, .5";}
+            #T { fill: "purple"}
             #S { fill: "green"}
             #Z { fill: "red"}
             #J { fill: "blue"}
             #L { fill: "orange"}
             #well{ opacity: 70%;}
             text{ font-size: 30%;}
-            body{  background-image: url("back.jpg");
+            body{  
+                background-image: url("back.jpg");
             background-size: cover; /* Resize the background image to cover the entire container */
         }
 
         </style>
         <defs>
             <path id="I" d="m-2 0h4v-1h-4z" fill="cyan"/>
-            <path id="O" d="m-1 1h2v2h-2z" fill="yellow"/>
+            <path id="O" d="m-1 1h2v-2h-2z" fill="yellow"/>
             <path id="T" d="m-1.5 .5v-1h1v-1h1v1h1v1z" />
             <path id="L" d="m-1.5 .5v-1h2v-1h1v2z" fill="orange" />
             <path id="J" d="m-1.5 .5v-2h1v1h2v1z" fill="blue"/>
@@ -35,20 +42,19 @@
 
         <rect id="hold" x="-6" width="5" height="3" fill="grey" />
         <rect id="well" width="10" height="20" fill="tan" />
-        <use y= "-2" id="shape0" href="#Z" />
-        <g transform='scale(1)'>
-            <use y = "2" x= "12" id="shape1" href="#I" />
-            <use y = "3" x= "12" id="shape2" href="#O" />
-            <use y = "8" x= "12" id="shape3" href="#T" />
-            <use y = "11" x= "12" id="shape4" href="#L" />
-            <use y = "14" x= "12" id="shape5" href="#J" />
-            <use y = "17" x= "12" id="shape6" href="#S" />
-        </g>
-
+        <use id="shape0" href="#Z" />
+        <g id="queue" transform='scale(1)' />
+        <g id="theFloor" />
+        <text x="-5" y="30" id="pieces" >pieces</text>
         <text x="-5" y="20" id="score" fill="green">scores</text>
         <text x="-5" y="10" id="lines" >lines</text>
         <text x="-5" id="level" >level</text>
     </svg>
 </body>
+<script type="module" src="model.mjs">
+    import model from "./model.mjs"
+console.log('import done', model)
+</script>
+<script src="index.js"></script>
 </html>
 

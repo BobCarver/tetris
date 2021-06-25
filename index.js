@@ -1,4 +1,4 @@
-shapes = {
+const shapes = {
     'I': {blocks:[[-2,-1], [-1,-1], [0, -1], [1,-1]], spawn:0},
     'O': {blocks:[[-1,-1], [0,-1],  [-1, 0], [0, 0]], spawn:0},
     'T': {blocks:[[-1, 0], [ 0, 0], [1,  0], [0,-1]], spawn:0},
@@ -7,94 +7,181 @@ shapes = {
     'J': {blocks:[[-2,-1], [-1,-1], [0, -1], [1,-1]], spawn:0},
     'L': {blocks:[[-2,-1], [-1,-1], [0, -1], [1,-1]], spawn:0}
 }
+const rot = [[1,0,0,1],[0,1,-1,0],[-1,0,0,-1],[0,-1,1,0]]
+const model = {
+    lines:0,
+    level:0,
+    pieces:0,
+    score:0,
+    floor: (new Array()).fill([],0,10),
+    // hardDrop : (shapes, e, f ,rotation) => shapes.reduce( (a,[x,y]) => {
+    //     const
+    //     [a,b,c,d] = rot[rotation]
+    //     xp = a*x + c*y + e,
+    //     yp = b*x + d*y + f
+    //     return max(a,this.floor[xp].length - yp)
+    // }),
+    freeze: ({shapes, x:e, y:f, rotation}) =>{
+        this.pieces++
+        const [a,b,c,d] = rot[rotation]
+        let ymax = 0, ymin= 20
+        for( const [xp,yp] of shapes) {
+            const
+                x = a*xp + c*yp + e,
+                y = b*xp + d*yp + f
+            ymin = min(y, ymin)
+            ymax = max(y, ymax)
+            this.floor[x][y] = true
+        }
+        const rows = this.floor.slice(ymin, ymax+1).filter( row => this.floor.every(col => col[row]))
+        this.lines += rows.length
+        this.level = this.line / 10 | 0
+        this.score += [0,40,100,300,1200][rows.length] * (this.level+ 1)
 
-let holdAvail = true, transform, timer
-function startGame() {
-    sequence =
-    for(7) sequence
-    nextPiece()
-    timer = setInterval()
+        // update score, lines etc
+        for( const row of rows) {
+            for( const col of this.floor) {
+                col.splice(row) // remove row
+                // update score
+            }
+        }
+        for( const col of this.floor )
+                // adjust any column to remove trailing undefined (holes)
+            while(!col.at(-1) && col.length)col.length--
+        return rows
+    },
+
+    check: ({shapes, x:e, y:f, rotation}) => {
+        const [a,b,c,d] = rot[rotation]
+        return shapes.every(([xp,yp]) => {
+            const 
+                x = a*xp +c*yp + e,
+                y = b*xp +d*yp + f
+            y>= 0 && this.floor[x] &&  this.floor[x][y]
+        })
+    }
 }
 
-sequence =sequence.slice(0,7)+ getSelection.next()
+const run = async () => {
+    while(true) {
+        // await new Promise(r=>startGame.addEventListener('click', r, {once:true}))
+        // model.reset()
+        sequence = makeSequence()
+        for ( const shape of sequence) {
 
-function nextPiece(){
-    transform = [1,0,0,0,1,1]
-    sequence.forEach( (c,i) => windows[`shape${i}`].href = `#${c}`)
+            await dropPiece(shape) 
+            const rows = model.freeze(shape)
+            //add block to theFloor
+            theFloor.lastElementChild.outerHTML += // is x,y correct ?
+                shapes[shape.shape].blocks.map(([x,y]) => `<rect x=${x+piece.x} y="${y} fill="${svg[c].fill}" />`)
+
+            // remove complete lines 
+            for( const b of theFloor.querySelectorAll('rect'))
+                if(row.includes(b.y)) theFloor.removeChild(b) // remove full lines
+                else b.y += rows.reduce((acc,e)=> acc + b.y > e, 0) // move remaining down
+            // update score, level & lines
+            ['score','level','lines','pieces'].forEach(l =>
+                window[l].textContent = model[l]
+            )  
+        }
+        alert("Game Over")
+    }
 }
 
-function endGame() {
-    clearInterval(timer)
-    alert("Game Over")
-    document.removeEventListener('keyup', x)
-    document.removeEventListener('keypress', y)
-}
- document.addEventListener('keyup', event => {
-    if(event.code == 'ArrowDown')// end soft drop
-    clearInterval(timer)
-    timer = setInterval(tick, model.interval)
-    // adjust tick
- })
-
-document.addEventListener('keypress', event => {
-
-    switch (event.code) {
+function doClick(key, state){
+    switch (key) {
         case 'ArrowDown':// soft drop
-            clearInterval(timer)
-            timer = setInterval(tick, model.interval/2)
-            return;
-
+            shape.style.speed /= 2;
+            return
         case ' ':// hard drop
-            transform = model.hardDrop(theShape, transform)
+            transform = model.hardDrop(state)
+            return
+        case 'C': case 'Shift': 
+                [hold.href, shape.href] =[shape.href, hold.href]
+                if( ! shape.href ) sequence.next()
+                // need to set y value so drop starts over
+                Object.assign(state, {shape: shape.href(1), x:0, y:0, rotation:0})
             return
 
-        case 'C': case 'Shift':// hold
-            if( holdAvail ){
-                holdAvail = false
-                transform = [1,0,0,0,1,0]
-                [shape0.href, hold.href] = [hold.href, theShape.shape0]
-                shape0.href != '' || nextBlock()
-            }// reset holdAvail in finalize
-            return
-        // the following cases are for movement of
-        // the shape.  They all set a transform that is
-        // used after the switch
-        // right
-        case 'ArrowRight': M = [a,b,c+1,d,e,f]; break;
+        case 'ArrowRight':
+            if( model.check({x:state.x+1, ...state})){
+                shape.x.baseVal.value = ++state.x
+                state.x++
+            } 
+            break;
         //left
-        case 'ArrowLeft': M =[a,b,c-1,d,e,f]; break;
+        case 'ArrowLeft': 
+            if( model.check({x:state.x-1, ...state})){
+                shape.x.baseVal.value = --state.y
+            } 
+            break;
         // rotate clockwise
-        case 'ArrowUp': case 'X': M = [-b,a,c,e,d,f]; break;
+        case 'ArrowUp': case 'X': 
+            if( model.checks({rotation:(state.rotation +1) % 4, ...state})) {
+                state.rotation = (state.rotation +1) % 4
+                shape.transform= `rotate(${state.rotation*90}, ${shape.x}, ${shape.y}`
+            }
+            break;
         // rotate counter-clockwise
-        case 'Ctrl': case 'Z':M = [b,a,c,e,-d,f];
+        case 'Ctrl': case 'Z':
+            if( model.checks({rotation:(state.rotation +3) % 4, ...state})) {
+                state.rotation = (state.rotation +3) % 4
+                shape.transform= `rotate(${state.rotation*90}, ${shape.x}, ${shape.y}`
+            }
+            break;
     }
-    if(model.check(theShape, M)) { // ?? twist and kicks
-        transform = M
-        shape0.transform = `M`
+}
+function keyUp(event){
+    if(event.code == 'ArrowDown')// end soft drop
+        shape.style.setProperty(rate, model.rate)
+}
+
+const dropPiece =(state) => new Promise( r => {
+    const f = event => doClick(event.key, state)
+
+    document.addEventListener('keyup', f)
+
+    shape.ontransitionend = event => {
+        console.log('transition end')
+        shape.y.baseVal.value += 1
+        if( model.check(piece, x, y, rotation)) piece.y += 1;
+        else setTimeout(() => {
+            // clean-up
+            document.removeEventListener('keyup', f)
+            r() // resolve promise
+        }, 500) // wait 1/2 sec
     }
+    shape.y.baseVal.value = state.y = 1
 })
 
-function tick(){
-    transform[5] += 1
-    if( !model.check(theShape, transform)) {
-        delay(500).then(finalize)
-    } else shape0.y += 1
-}
+//model
+function *sequence(){
+    while(true) {
+        const letters = 'IOTSZJL'.split()
+        for(i=0; i < 7; i++) {
+            const c = queue.firstChild.href.slice(1)
+            if( !check({shape:c, x:0, y:-1, rotation:0}))return 
+            queue.removeChild(queue.firstChild)
 
-function finalize() {
-    holdAvail = true
-    clearInterval(timer)
-    const rows = model.freeze(theShape, transform)
-    // update UI
-    theFloor.lastElementChild.outerHTML += // is x,y correct ?
-    svg[c].blocks.map(([x,y]) => `<rect x=${x} y="${y} fill="${svg[c].fill}" />`)
-    for( const b of theFloor.querySelectorAll('rect'))
-        if(row.includes(b.y)) theFloor.removeChild(b) // remove full lines
-        else b.y += rows.reduce((acc,e)=> acc + b.y > e) // move remaining down
-    // update score, level & lines
-    ['score','level','lines','pieces'].forEach(l =>
-        window[i].textContent = model[l]
-    )
-    // adjust tick
-    nextPiece()
+            const n = i+ (a.length-i)*random() | 0
+            const el = document.createElement('use')
+            el.setAttribute('x', 12)
+            el.setAttribute('y', 24)
+            el.setAttribute('href', `#${letters[n]}`)
+            queue.apendChild(el)
+
+            for( const el of queue.children) el.y.baseVal.value -= 3
+
+            letters[n] = letters[i]
+            yield {shape:c, x:0, y:0, rotation:0}
+        }
+    }
 }
+queue.innerHTML ='IOTSZJL'.split('').map((e,i,a) => {
+    const n =i+(a.length-i)*Math.random() | 0,
+    t = a[n]
+    a[n] = a[i]
+    return `<use href='#${t}' x='12' y='${i*3}' />`
+}).join('\n')
+
+run()
