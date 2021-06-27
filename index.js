@@ -6,60 +6,92 @@ const shapes = {
     'Z': {blocks:[[-2,-1], [-1,-1], [0, -1], [1,-1]], spawn:0},
     'J': {blocks:[[-2,-1], [-1,-1], [0, -1], [1,-1]], spawn:0},
     'L': {blocks:[[-2,-1], [-1,-1], [0, -1], [1,-1]], spawn:0}
-}
-const rot = [[1,0,0,1],[0,1,-1,0],[-1,0,0,-1],[0,-1,1,0]]
-const model = {
-    lines:0,
-    level:0,
-    pieces:0,
-    score:0,
-    floor: (new Array()).fill([],0,10),
-    // hardDrop : (shapes, e, f ,rotation) => shapes.reduce( (a,[x,y]) => {
-    //     const
-    //     [a,b,c,d] = rot[rotation]
-    //     xp = a*x + c*y + e,
-    //     yp = b*x + d*y + f
-    //     return max(a,this.floor[xp].length - yp)
-    // }),
-    freeze: ({shapes, x:e, y:f, rotation}) =>{
-        this.pieces++
-        const [a,b,c,d] = rot[rotation]
-        let ymax = 0, ymin= 20
-        for( const [xp,yp] of shapes) {
-            const
-                x = a*xp + c*yp + e,
-                y = b*xp + d*yp + f
-            ymin = min(y, ymin)
-            ymax = max(y, ymax)
-            this.floor[x][y] = true
-        }
-        const rows = this.floor.slice(ymin, ymax+1).filter( row => this.floor.every(col => col[row]))
-        this.lines += rows.length
-        this.level = this.line / 10 | 0
-        this.score += [0,40,100,300,1200][rows.length] * (this.level+ 1)
+},
+rot = [[1,0,0,1],[0,1,-1,0],[-1,0,0,-1],[0,-1,1,0]],
+foo = {
+    'ArrowRight':   [ 1, 0, 0],
+    'ArrowLeft':    [-1, 0, 0],
+    'ArrowUp':      [ 0, 0, 1],
+    'X':            [ 0, 0, 1],
+    'Ctrl':         [ 0, 0,-1],
+    'Z':            [ 0, 0,-1]
+},
+state = {shape: '',x: 0,y: 0,rotation:0, rate: 1, drop: 20,delay:500},
+floor = [[],[],[],[],[],[],[],[],[],[]]
 
-        // update score, lines etc
-        for( const row of rows) {
-            for( const col of this.floor) {
-                col.splice(row) // remove row
-                // update score
-            }
-        }
-        for( const col of this.floor )
-                // adjust any column to remove trailing undefined (holes)
-            while(!col.at(-1) && col.length)col.length--
-        return rows
-    },
+let lines=0,
+    level = 0,
+    pieces = 0,
+    score = 0
 
-    check: ({shapes, x:e, y:f, rotation}) => {
-        const [a,b,c,d] = rot[rotation]
-        return shapes.every(([xp,yp]) => {
-            const 
-                x = a*xp +c*yp + e,
-                y = b*xp +d*yp + f
-            y>= 0 && this.floor[x] &&  this.floor[x][y]
-        })
+
+function check(e, state) {
+    switch(e.key.code){
+    case 'ArrowDown':// soft drop
+        shape.style.speed = state.rate;
+        return
+    case ' ':// hard drop
+        shape.setAttribute('y', state.drop)
+        state.delay = 0
+        return
+    case 'C': case 'Shift':
+            [hold.href, shape.href] =[shape.href, hold.href]
+            if( ! shape.href ) sequence.next()
+            // need to set y value so drop starts over
+            Object.assign(state, {shape: shape.href(1), x:0, y:0, rotation:0})
+        return
+    default: if( !foo[key.code]) return
+        foobar(...foo[key.code], dy, state)
     }
+}
+
+function foobar(dx,dr,dy, state){
+    const
+        xp = state.x + dx,
+        yp = state.y,
+        rotation = (state.rotation + dr +4)%4,
+        [a,b,c,d] = rot[rotation]
+
+    let drop = 20
+    for( s of shapes[state.shape].blocks){
+        const
+        x = a*xp +c*yp + dx,
+        y = b*xp +d*yp + dy
+        if ( x < 0 || x >=10 || floor[x][y])return
+        drop = min(drop, 20-floor[x].length - y)
+    }
+    shape.setAttribute('x', x)
+    shape.setAttribute('y', y)
+    shape.setAttribute('transform',`rotate(${90*rotation})`)
+    Object.assign(state, {x,y,rotation, drop})
+}
+function freeze(){
+    pieces++
+    const [a,b,c,d] = rot[rotation]
+    let ymax = 0, ymin= 20
+    for( const [xp,yp] of shapes[shape].blocks) {
+        const
+            x = a*xp + c*yp + e,
+            y = b*xp + d*yp + f
+        ymin = min(y, ymin)
+        ymax = max(y, ymax)
+        floor[x][y] = true
+    }
+    const rows = floor.slice(ymin, ymax+1).filter( row => floor.every(col => col[row]))
+    lines += rows.length
+    level = line / 10 | 0
+    score += [0,40,100,300,1200][rows.length] * (level+ 1)
+
+    // update score, lines etc
+    for( const row of rows) {
+        for( const col of floor) {
+            col.splice(row) // remove row
+        }
+    }
+    for( const col of floor )
+            // adjust any column to remove trailing undefined (holes)
+        while(!col.at(-1) && col.length)col.length--
+    return rows
 }
 
 const run = async () => {
@@ -69,82 +101,39 @@ const run = async () => {
         sequence = makeSequence()
         for ( const shape of sequence) {
 
-            await dropPiece(shape) 
+            await dropPiece(shape)
             const rows = model.freeze(shape)
             //add block to theFloor
             theFloor.lastElementChild.outerHTML += // is x,y correct ?
                 shapes[shape.shape].blocks.map(([x,y]) => `<rect x=${x+piece.x} y="${y} fill="${svg[c].fill}" />`)
 
-            // remove complete lines 
+            // remove complete lines
             for( const b of theFloor.querySelectorAll('rect'))
                 if(row.includes(b.y)) theFloor.removeChild(b) // remove full lines
                 else b.y += rows.reduce((acc,e)=> acc + b.y > e, 0) // move remaining down
             // update score, level & lines
             ['score','level','lines','pieces'].forEach(l =>
                 window[l].textContent = model[l]
-            )  
+            )
         }
         alert("Game Over")
     }
-}
-
-function doClick(key, state){
-    switch (key) {
-        case 'ArrowDown':// soft drop
-            shape.style.speed /= 2;
-            return
-        case ' ':// hard drop
-            transform = model.hardDrop(state)
-            return
-        case 'C': case 'Shift': 
-                [hold.href, shape.href] =[shape.href, hold.href]
-                if( ! shape.href ) sequence.next()
-                // need to set y value so drop starts over
-                Object.assign(state, {shape: shape.href(1), x:0, y:0, rotation:0})
-            return
-
-        case 'ArrowRight':
-            if( model.check({x:state.x+1, ...state})){
-                shape.x.baseVal.value = ++state.x
-                state.x++
-            } 
-            break;
-        //left
-        case 'ArrowLeft': 
-            if( model.check({x:state.x-1, ...state})){
-                shape.x.baseVal.value = --state.y
-            } 
-            break;
-        // rotate clockwise
-        case 'ArrowUp': case 'X': 
-            if( model.checks({rotation:(state.rotation +1) % 4, ...state})) {
-                state.rotation = (state.rotation +1) % 4
-                shape.transform= `rotate(${state.rotation*90}, ${shape.x}, ${shape.y}`
-            }
-            break;
-        // rotate counter-clockwise
-        case 'Ctrl': case 'Z':
-            if( model.checks({rotation:(state.rotation +3) % 4, ...state})) {
-                state.rotation = (state.rotation +3) % 4
-                shape.transform= `rotate(${state.rotation*90}, ${shape.x}, ${shape.y}`
-            }
-            break;
-    }
-}
-function keyUp(event){
-    if(event.code == 'ArrowDown')// end soft drop
-        shape.style.setProperty(rate, model.rate)
 }
 
 const dropPiece =(state) => new Promise( r => {
     const f = event => doClick(event.key, state)
 
     document.addEventListener('keyup', f)
+    document.addEventListener('keydown', (event) => {
+        if(event.code == 'ArrowDown')// end soft drop
+            shape.style.setProperty(rate, model.rate)
+    })
 
     shape.ontransitionend = event => {
         console.log('transition end')
         shape.y.baseVal.value += 1
         if( model.check(piece, x, y, rotation)) piece.y += 1;
+        // on hardrop we don't need to wait
         else setTimeout(() => {
             // clean-up
             document.removeEventListener('keyup', f)
@@ -154,13 +143,12 @@ const dropPiece =(state) => new Promise( r => {
     shape.y.baseVal.value = state.y = 1
 })
 
-//model
-function *sequence(){
+function *makeSequence(){
     while(true) {
         const letters = 'IOTSZJL'.split()
         for(i=0; i < 7; i++) {
-            const c = queue.firstChild.href.slice(1)
-            if( !check({shape:c, x:0, y:-1, rotation:0}))return 
+            const c = queue.firstChild.getAttribute("href")[1]
+            if( !model.check({shape:c, x:0, y:-1, rotation:0}))return
             queue.removeChild(queue.firstChild)
 
             const n = i+ (a.length-i)*random() | 0
@@ -185,3 +173,4 @@ queue.innerHTML ='IOTSZJL'.split('').map((e,i,a) => {
 }).join('\n')
 
 run()
+
